@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <chrono>
+#include <filesystem>
 #include <ppl.h>
 
 using namespace std;
@@ -139,11 +140,15 @@ private:
 
 
 int main() {
-	string dir = "C:\\Users\\berna\\ClionProjects\\video_distribute\\";
+	string dir = experimental::filesystem::current_path().string();
+	cout << "path: " << dir << endl;
+
 	unsigned long long sum = 0;
 	for (auto s : { "kittens", "videos_worth_spreading", "trending_today", "kittens" }) {
-		auto start = chrono::steady_clock::now(); //use a
-		VideoDistribute v(dir + "in\\" + s + ".in");
+		auto start = chrono::steady_clock::now();
+		string filename = experimental::filesystem::current_path().append(string(s) + ".in").string();
+		cout << "start " << filename;
+		VideoDistribute v(filename);
 		unsigned long long i = v.run();
 		sum += i;
 		cout << s << " " << i << endl;
