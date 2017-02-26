@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <chrono>
+#include <ppl.h>
 
 using namespace std;
 
@@ -43,7 +44,7 @@ public:
 				}
 			}
 			video_endpoint_popularity.resize(R);
-			for (int r = 0; r < R; ++r) {
+			for (unsigned short int r = 0; r < R; ++r) {
 				unsigned short v, e;
 				unsigned int p;
 				input >> v >> e >> p;
@@ -60,8 +61,13 @@ public:
 	}
 
 	unsigned long long score() {
-		unsigned long long s = 0, rs = 0;
-		for (auto vep : video_endpoint_popularity) {
+		using namespace Concurrency;
+		combinable<uint64_t> part_sums([] { return 0; });
+		combinable<uint64_t> part_rs([] { return 0; });
+
+		concurrency::parallel_for_each(begin(video_endpoint_popularity),
+			end(video_endpoint_popularity),
+			[this, &part_sums, &part_rs](const VEP& vep) {
 			unsigned short int to_dc = dc_latencies[vep.e];
 			unsigned short int min_latency = to_dc;
 			for (auto c_to_l : endpoint_to_cache_to_latency[vep.e]) {
@@ -73,10 +79,10 @@ public:
 					}
 				}
 			}
-			s += (to_dc - min_latency) * vep.p;
-			rs += vep.p;
-		}
-		return s * 1000 / rs;
+			part_sums.local() += (to_dc - min_latency) * vep.p;
+			part_rs.local() += vep.p;
+		});
+		return part_sums.combine(std::plus<uint64_t>()) * 1000 / part_rs.combine(std::plus<uint64_t>());
 	}
 
 	unsigned long long run() {
@@ -134,8 +140,8 @@ private:
 
 int main() {
 	string dir = "C:\\Users\\berna\\ClionProjects\\video_distribute\\";
-	int sum = 0;
-	for (auto s : { "me_at_the_zoo", "videos_worth_spreading", "trending_today", "kittens" }) {
+	unsigned long long sum = 0;
+	for (auto s : { "kittens", "videos_worth_spreading", "trending_today", "kittens" }) {
 		auto start = chrono::steady_clock::now(); //use a
 		VideoDistribute v(dir + "in\\" + s + ".in");
 		unsigned long long i = v.run();
