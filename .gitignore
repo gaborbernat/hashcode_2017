@@ -1,4 +1,5 @@
 .ipynb_checkpoints
+*.out
 *.vcxproj*
 x64
 Debug
